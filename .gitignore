@@ -1,0 +1,9 @@
+.DS_Store
+*.swp
+.idea/
+.vscode/
+# Generated protobuf code — never commit generated code
+*_pb2.py
+*_pb2_grpc.py
+*_grpc.pb.go
+*.pb.go
