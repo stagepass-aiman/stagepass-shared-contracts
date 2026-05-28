@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:stagepass:schema:flash-sale:flash-sale-hold-result:1.0.0",
+  "title": "FlashSaleHoldResult",
+  "description": "Published by Seat Inventory Service after executing (or choosing not to execute) the Redis Lua script for a FlashSaleHoldRequest. Consumed by: Booking Service (saga advancement) and Notification Service (WebSocket push to customer). Partition key: customerId — avoids hotspot on popular events, enables ordered delivery per customer.",
+  "type": "object",
+  "required": [
+    "messageId",
+    "schemaVersion",
+    "messageType",
+    "bookingId",
+    "customerId",
+    "eventId",
+    "result",
+    "unavailableSeats",
+    "processedAt",
+    "correlationId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Consumer deduplication key (NFR-REL-002). A replayed HOLD_SUCCEEDED must not trigger duplicate payment initiation. Booking Service must check booking.status != PENDING before acting: if already processed, ack and discard."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "messageType": {
+      "type": "string",
+      "const": "FlashSaleHoldResult"
+    },
+    "bookingId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Partition key for this topic. Avoids hotspot on popular eventIds."
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["HOLD_SUCCEEDED", "HOLD_FAILED", "HOLD_EXPIRED"],
+      "description": "HOLD_SUCCEEDED: All seats atomically held. Booking proceeds to payment (ADR-005 Step 2). HOLD_FAILED: At least one seat unavailable. No seats held. Booking transitions PENDING→CANCELLED. HOLD_EXPIRED: Request arrived after expiresAt. Lua not executed. Booking transitions PENDING→CANCELLED."
+    },
+    "holdId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Present only when result=HOLD_SUCCEEDED. Same semantics as gRPC HoldSeatsResponse.hold_id."
+    },
+    "heldUntil": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Present only when result=HOLD_SUCCEEDED. Redis TTL expiry = processedAt + 600s. Notification Service displays this as the checkout countdown timer."
+    },
+    "unavailableSeats": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "description": "Seats that blocked the hold (result=HOLD_FAILED). Empty array when result=HOLD_SUCCEEDED or HOLD_EXPIRED. Notification Service includes these in the hold-denied WebSocket event so the UI can highlight unavailable seats."
+    },
+    "processedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the Seat Inventory consumer processed this request."
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Propagated from the original FlashSaleHoldRequest. Enables end-to-end trace: POST /bookings → hold-requests → hold-results → saga continuation."
+    }
+  }
+}

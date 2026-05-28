@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:stagepass:schema:seat:seat-hold-expired:1.0.0",
+  "title": "SeatHoldExpired",
+  "description": "Published by Seat Inventory Service HoldReconciliationScheduler when a HELD row is found past expires_at. Consumed by: Notification Service (push checkout-window-expired to customerId WebSocket room), Booking Service (saga timeout watchdog cross-check).",
+  "type": "object",
+  "required": [
+    "messageId",
+    "schemaVersion",
+    "eventType",
+    "seatId",
+    "eventId",
+    "bookingId",
+    "expiredAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Consumer deduplication key (NFR-REL-002)."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "eventType": {
+      "type": "string",
+      "const": "seat.hold-expired"
+    },
+    "seatId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "bookingId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Resolved from seat_holds table after Redis TTL expiry. Used by Notification Service to push checkout-window-expired to the customer WebSocket room."
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Resolved from seat_holds table. Required by Notification Service for userId-scoped WebSocket room routing."
+    },
+    "expiredAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the hold TTL was detected as expired by the reconciliation scheduler."
+    }
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:stagepass:schema:flash-sale:flash-sale-hold-request:1.0.0",
+  "title": "FlashSaleHoldRequest",
+  "description": "Published by Booking Service when flash sale mode is active (GET flash-sale:mode:{eventId} = 'active' from Redis). Consumed by Seat Inventory Service consumer group seat-inventory-service-consumer. All-or-nothing semantics: the Lua script holds ALL seatIds or NONE (ADR-006 §3.2, ADR-007 §3.5). Partition key: eventId — FIFO fairness per event.",
+  "type": "object",
+  "required": [
+    "messageId",
+    "schemaVersion",
+    "messageType",
+    "bookingId",
+    "customerId",
+    "eventId",
+    "seatIds",
+    "idempotencyKey",
+    "expiresAt",
+    "publishedAt",
+    "correlationId"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Consumer deduplication key (NFR-REL-002). Seat Inventory checks Redis flash-hold-processed:{bookingId} before executing Lua — if present, return cached result without re-executing (ADR-006 §3.10)."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "messageType": {
+      "type": "string",
+      "const": "FlashSaleHoldRequest"
+    },
+    "bookingId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Value stored in Redis hold key: seat:{eventId}:{seatId} = bookingId. All-or-nothing: Lua sets this for ALL seatIds or none (ADR-006 §3.8)."
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Partition key for flash-sale.hold-results topic (avoids hotspot on popular events). Used by Notification Service to route WebSocket events."
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Partition key for this topic. All requests for one event are serialised on one Kafka partition — source of FIFO fairness guarantee (ADR-007 §3.3)."
+    },
+    "seatIds": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "description": "Seats to hold atomically. Booking Service validated 1-8 constraint before publishing. Consumer does NOT re-validate count."
+    },
+    "idempotencyKey": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Client idempotency key from POST /bookings (NFR-REL-001). Propagated through the flash sale queue for end-to-end idempotency."
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC expiry = publishedAt + 600s. Consumer MUST check: if now() >= expiresAt, publish HOLD_EXPIRED without executing Lua (ADR-007 §3.5). Prevents holding seats for customers whose checkout sessions have already timed out."
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the Booking Service published this message."
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Same as x-correlation-id header. Duplicated in payload to survive header-stripping middleware."
+    }
+  }
+}

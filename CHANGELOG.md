@@ -2,7 +2,14 @@
 
 ## [Unreleased]
 
-## [0.1.0] — YYYY-MM-DD
+## [0.2.0] — 2026-05-27
 ### Added
-- Initial repository structure
-- Placeholder directories for all proto and schema locations
+#   - proto/stagepass/seat_inventory/v1/seat_inventory.proto
+#   - schemas/events/seat/seat-state-changed.schema.json
+#   - schemas/events/seat/seat-hold-expired.schema.json
+#   - schemas/events/seat/bulk-seat-state-changed.schema.json
+#   - schemas/events/flash-sale/ (new directory)
+#   - schemas/events/flash-sale/flash-sale-hold-request.schema.json
+#   - schemas/events/flash-sale/flash-sale-hold-result.schema.json
+#
+#   Booking Service will pin v0.2.0 for gRPC client stub generation.

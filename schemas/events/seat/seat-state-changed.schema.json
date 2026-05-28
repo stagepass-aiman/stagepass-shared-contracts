@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:stagepass:schema:seat:seat-state-changed:1.0.0",
+  "title": "SeatStateChanged",
+  "description": "Published by Seat Inventory Service on every individual seat state transition. Derived from seat_async.yaml SeatStateChangedPayload. Consumed by: Notification (WebSocket push), Search (index update), Analytics (ClickHouse).",
+  "type": "object",
+  "required": [
+    "messageId",
+    "schemaVersion",
+    "eventType",
+    "seatId",
+    "eventId",
+    "fromState",
+    "toState",
+    "transitionReason",
+    "occurredAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Consumer deduplication key (NFR-REL-002). Deduplicate on Redis SET NX messageId EX 3600."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "eventType": {
+      "type": "string",
+      "const": "seat.state-changed"
+    },
+    "seatId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Non-fungible seat identifier. 12B != 12C (ADR-006)."
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Kafka partition key. All state changes for one event land on one partition — required for ordered real-time seat map (NFR-PERF-005)."
+    },
+    "sectionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "row": {
+      "type": "string",
+      "example": "A"
+    },
+    "seatNumber": {
+      "type": "string",
+      "example": "12B"
+    },
+    "fromState": {
+      "$ref": "#/definitions/SeatState"
+    },
+    "toState": {
+      "$ref": "#/definitions/SeatState"
+    },
+    "transitionReason": {
+      "type": "string",
+      "enum": [
+        "HOLD_CREATED",
+        "HOLD_RELEASED",
+        "HOLD_EXPIRED",
+        "BOOKING_COMMITTED",
+        "BOOKING_CANCELLED",
+        "ADMIN_BLOCKED",
+        "ADMIN_UNBLOCKED"
+      ],
+      "description": "Machine-readable reason. Enables Notification Service to select the correct WebSocket event type."
+    },
+    "bookingId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Present for HOLD_CREATED and BOOKING_COMMITTED. Absent for HOLD_EXPIRED (Redis TTL — no application context), ADMIN_BLOCKED, ADMIN_UNBLOCKED."
+    },
+    "customerId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Present for HOLD_CREATED and BOOKING_COMMITTED. Used by Notification Service to route WebSocket events to the correct userId room."
+    },
+    "heldUntil": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Present only when toState=HELD. Redis TTL expiry timestamp. Browser seat map shows held-until indicator for seats held by others."
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "definitions": {
+    "SeatState": {
+      "type": "string",
+      "enum": ["AVAILABLE", "HELD", "BOOKED", "BLOCKED"],
+      "description": "ADR-006 §3.9: AVAILABLE=Redis key absent; HELD=Redis key present TTL=600s; BOOKED=Redis key present no TTL; BLOCKED=PG only no Redis key."
+    }
+  }
+}
