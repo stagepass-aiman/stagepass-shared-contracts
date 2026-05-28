@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:stagepass:schema:seat:bulk-seat-state-changed:1.0.0",
+  "title": "BulkSeatStateChanged",
+  "description": "Published by Seat Inventory Service for bulk state transitions affecting multiple seats in a single operation: EVENT_CANCELLED, VENUE_SUSPENDED, ADMIN_BLOCKED, ADMIN_UNBLOCKED. A single message may contain thousands of seatIds. Consumers must handle large affectedSeatIds arrays without OOM (stream/batch process — do not load all into memory at once).",
+  "type": "object",
+  "required": [
+    "messageId",
+    "schemaVersion",
+    "eventType",
+    "eventId",
+    "fromState",
+    "toState",
+    "transitionReason",
+    "affectedSeatIds",
+    "occurredAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Consumer deduplication key (NFR-REL-002)."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "eventType": {
+      "type": "string",
+      "const": "seat.bulk-state-changed"
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Kafka partition key. All bulk changes for one event on one partition."
+    },
+    "fromState": {
+      "$ref": "#/definitions/SeatState"
+    },
+    "toState": {
+      "$ref": "#/definitions/SeatState"
+    },
+    "transitionReason": {
+      "type": "string",
+      "enum": [
+        "EVENT_CANCELLED",
+        "VENUE_SUSPENDED",
+        "ADMIN_BLOCKED",
+        "ADMIN_UNBLOCKED"
+      ]
+    },
+    "affectedSeatIds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "description": "All seat IDs that transitioned in this batch. For large events this may be thousands of entries. Consumers must batch-process, not load all into memory."
+    },
+    "initiatedByUserId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Admin user ID who triggered the bulk operation. Present for ADMIN_BLOCKED and ADMIN_UNBLOCKED."
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "definitions": {
+    "SeatState": {
+      "type": "string",
+      "enum": ["AVAILABLE", "HELD", "BOOKED", "BLOCKED"]
+    }
+  }
+}
